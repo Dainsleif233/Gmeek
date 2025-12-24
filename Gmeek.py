@@ -5,7 +5,7 @@ import time
 import datetime
 import shutil
 import urllib
-import requests
+import cmarkgfm
 import argparse
 import urllib.parse
 import html
@@ -78,7 +78,7 @@ class GMEEK:
         self.post_dir = self.root_dir + self.post_folder
 
         github = Github(auth=Auth.Token(self.options.github_token))
-        gitee = Gitee(self.options.gitee_token, self.options.gitee_repo)
+        gitee = Gitee(self.options.gitee_key, self.options.gitee_repo)
         self.repo = github.get_repo(options.repo_name)
         self.gitee_issues = gitee.get_issues()
         self.feed = FeedGenerator()
@@ -193,18 +193,6 @@ class GMEEK:
 
         self.TZ = datetime.timezone(datetime.timedelta(hours=self.blogBase["UTC"]))
 
-    def markdown2html(self, mdstr):
-        payload = {"text": mdstr, "mode": "gfm"}
-        headers = {"Authorization": "token {}".format(self.options.github_token)}
-        try:
-            response = requests.post(
-                "https://api.github.com/markdown", json=payload, headers=headers
-            )
-            response.raise_for_status()  # Raises an exception if status code is not 200
-            return response.text
-        except requests.RequestException as e:
-            raise Exception("markdown2html error: {}".format(e))
-
     def renderHtml(self, template, blogBase, postListJson, htmlDir, icon):
         file_loader = FileSystemLoader("templates")
         env = Environment(loader=file_loader)
@@ -219,7 +207,7 @@ class GMEEK:
     def createPostHtml(self, issue):
         mdFileName = re.sub(r"[<>:/\\|?*\"]|[\0-\31]", "-", issue["postTitle"])
         f = open(self.backup_dir + mdFileName + ".md", "r", encoding="UTF-8")
-        post_body = self.markdown2html(f.read())
+        post_body = cmarkgfm.markdown_to_html(f.read())
         f.close()
 
         postBase = self.blogBase.copy()
@@ -494,7 +482,7 @@ class GMEEK:
             )
             self.blogBase[listJsonName][postNum][
                 "commentNum"
-            ] = 0 # issue.get_comments().totalCount
+            ] = 0  # issue.get_comments().totalCount
 
             if issue.body == None:
                 self.blogBase[listJsonName][postNum]["description"] = ""
@@ -513,11 +501,11 @@ class GMEEK:
                 )
 
             self.blogBase[listJsonName][postNum]["top"] = 0
-            # for event in issue.get_events():
-            #     if event.event == "pinned":
-            #         self.blogBase[listJsonName][postNum]["top"] = 1
-            #     elif event.event == "unpinned":
-            #         self.blogBase[listJsonName][postNum]["top"] = 0
+            for event in issue.get_events():
+                if event.event == "pinned":
+                    self.blogBase[listJsonName][postNum]["top"] = 1
+                elif event.event == "unpinned":
+                    self.blogBase[listJsonName][postNum]["top"] = 0
 
             try:
                 postConfig = json.loads(issue.body.split("\r\n")[-1:][0].split("##")[1])
