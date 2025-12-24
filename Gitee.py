@@ -10,16 +10,26 @@ class GiteeLable:
 
 class GiteeIssue:
     def __init__(
-        self, number: str, title: str, body: str, labels: list, created_at: str
+        self,
+        number: str,
+        title: str,
+        body: str,
+        labels: list,
+        created_at: str,
+        comments: int,
     ):
         self.number = number
         self.title = title
         self.body = body
         self.labels = [GiteeLable(label["name"], label["color"]) for label in labels]
         self.created_at = datetime.fromisoformat(created_at)
+        self.comments = comments
 
     def get_events(self):
         return []
+
+    def get_comments(self):
+        return {"totalCount": self.comments}
 
 
 class Gitee:
@@ -38,6 +48,7 @@ class Gitee:
                     issue["body"],
                     issue["labels"],
                     issue["created_at"],
+                    issue["comments"],
                 )
                 for issue in response.json()
             ]

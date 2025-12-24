@@ -15,6 +15,7 @@ from feedgen.feed import FeedGenerator
 from jinja2 import Environment, FileSystemLoader
 from transliterate import translit
 from collections import OrderedDict
+from cmarkgfm.cmark import Options as cmarkgfmOptions
 
 from Gitee import Gitee
 
@@ -207,7 +208,8 @@ class GMEEK:
     def createPostHtml(self, issue):
         mdFileName = re.sub(r"[<>:/\\|?*\"]|[\0-\31]", "-", issue["postTitle"])
         f = open(self.backup_dir + mdFileName + ".md", "r", encoding="UTF-8")
-        post_body = cmarkgfm.github_flavored_markdown_to_html(f.read())
+        md_options = cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG
+        post_body = cmarkgfm.github_flavored_markdown_to_html(f.read(), md_options)
         f.close()
 
         postBase = self.blogBase.copy()
@@ -482,7 +484,7 @@ class GMEEK:
             )
             self.blogBase[listJsonName][postNum][
                 "commentNum"
-            ] = 0  # issue.get_comments().totalCount
+            ] = issue.get_comments().totalCount
 
             if issue.body == None:
                 self.blogBase[listJsonName][postNum]["description"] = ""
