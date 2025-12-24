@@ -16,6 +16,8 @@ from jinja2 import Environment, FileSystemLoader
 from transliterate import translit
 from collections import OrderedDict
 
+from Gitee import Gitee
+
 ######################################################################################
 i18n = {
     "Search": "Search",
@@ -76,11 +78,15 @@ class GMEEK:
         self.post_dir = self.root_dir + self.post_folder
 
         github = Github(auth=Auth.Token(self.options.github_token))
+        gitee = Gitee(self.options.gitee_token, self.options.gitee_repo)
         self.repo = github.get_repo(options.repo_name)
+        self.gitee_issues = gitee.get_issues()
         self.feed = FeedGenerator()
         self.oldFeedString = ""
 
         self.labelColorDict = json.loads("{}")
+        for label in gitee.get_labels():
+            self.labelColorDict[label.name] = "#" + label.color
         for label in self.repo.get_labels():
             self.labelColorDict[label.name] = "#" + label.color
         print(self.labelColorDict)
@@ -488,7 +494,7 @@ class GMEEK:
             )
             self.blogBase[listJsonName][postNum][
                 "commentNum"
-            ] = issue.get_comments().totalCount
+            ] = 0 # issue.get_comments().totalCount
 
             if issue.body == None:
                 self.blogBase[listJsonName][postNum]["description"] = ""
@@ -507,11 +513,11 @@ class GMEEK:
                 )
 
             self.blogBase[listJsonName][postNum]["top"] = 0
-            for event in issue.get_events():
-                if event.event == "pinned":
-                    self.blogBase[listJsonName][postNum]["top"] = 1
-                elif event.event == "unpinned":
-                    self.blogBase[listJsonName][postNum]["top"] = 0
+            # for event in issue.get_events():
+            #     if event.event == "pinned":
+            #         self.blogBase[listJsonName][postNum]["top"] = 1
+            #     elif event.event == "unpinned":
+            #         self.blogBase[listJsonName][postNum]["top"] = 0
 
             try:
                 postConfig = json.loads(issue.body.split("\r\n")[-1:][0].split("##")[1])
@@ -587,6 +593,10 @@ class GMEEK:
         for issue in issues:
             self.addOnePostJson(issue)
 
+        extra_issues = self.gitee_issues
+        for issue in extra_issues:
+            self.addOnePostJson(issue)
+
         for issue in self.blogBase["postListJson"].values():
             self.createPostHtml(issue)
 
@@ -629,8 +639,9 @@ class GMEEK:
 ######################################################################################
 parser = argparse.ArgumentParser()
 parser.add_argument("github_token", help="github_token")
-parser.add_argument("gitee_key", help="gitee_key")
 parser.add_argument("repo_name", help="repo_name")
+parser.add_argument("gitee_key", help="gitee_key")
+parser.add_argument("gitee_repo", help="gitee_repo")
 parser.add_argument("--issue_number", help="issue_number", default=0, required=False)
 options = parser.parse_args()
 
