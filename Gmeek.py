@@ -15,7 +15,6 @@ from feedgen.feed import FeedGenerator
 from jinja2 import Environment, FileSystemLoader
 from transliterate import translit
 from collections import OrderedDict
-from cmarkgfm.cmark import Options as cmarkgfmOptions
 
 from Gitee import Gitee
 
