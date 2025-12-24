@@ -5,7 +5,7 @@ import time
 import datetime
 import shutil
 import urllib
-import cmarkgfm
+import requests
 import argparse
 import urllib.parse
 import html
@@ -194,6 +194,18 @@ class GMEEK:
 
         self.TZ = datetime.timezone(datetime.timedelta(hours=self.blogBase["UTC"]))
 
+    def markdown2html(self, mdstr):
+        payload = {"text": mdstr, "mode": "gfm"}
+        headers = {"Authorization": "token {}".format(self.options.github_token)}
+        try:
+            response = requests.post(
+                "https://api.github.com/markdown", json=payload, headers=headers
+            )
+            response.raise_for_status()  # Raises an exception if status code is not 200
+            return response.text
+        except requests.RequestException as e:
+            raise Exception("markdown2html error: {}".format(e))
+
     def renderHtml(self, template, blogBase, postListJson, htmlDir, icon):
         file_loader = FileSystemLoader("templates")
         env = Environment(loader=file_loader)
@@ -208,8 +220,7 @@ class GMEEK:
     def createPostHtml(self, issue):
         mdFileName = re.sub(r"[<>:/\\|?*\"]|[\0-\31]", "-", issue["postTitle"])
         f = open(self.backup_dir + mdFileName + ".md", "r", encoding="UTF-8")
-        md_options = cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG
-        post_body = cmarkgfm.github_flavored_markdown_to_html(f.read(), md_options)
+        post_body = self.markdown2html(f.read())
         f.close()
 
         postBase = self.blogBase.copy()
