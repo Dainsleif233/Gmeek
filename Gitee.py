@@ -29,7 +29,11 @@ class GiteeIssue:
         return []
 
     def get_comments(self):
-        return {"totalCount": self.comments}
+        class CommentResponse:
+            def __init__(self, total_count):
+                self.totalCount = total_count
+        
+        return CommentResponse(self.comments)
 
 
 class Gitee:
