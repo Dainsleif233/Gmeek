@@ -207,7 +207,7 @@ class GMEEK:
     def createPostHtml(self, issue):
         mdFileName = re.sub(r"[<>:/\\|?*\"]|[\0-\31]", "-", issue["postTitle"])
         f = open(self.backup_dir + mdFileName + ".md", "r", encoding="UTF-8")
-        post_body = cmarkgfm.markdown_to_html(f.read())
+        post_body = cmarkgfm.github_flavored_markdown_to_html(f.read())
         f.close()
 
         postBase = self.blogBase.copy()
