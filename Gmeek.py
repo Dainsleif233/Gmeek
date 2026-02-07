@@ -597,18 +597,6 @@ class GMEEK:
         self.createFeedXml()
         print("====== create static html end ======")
 
-    def runOne(self, number_str):
-        print("====== start create static html ======")
-        issue = self.repo.get_issue(int(number_str))
-        if issue.state == "open":
-            listJsonName = self.addOnePostJson(issue)
-            self.createPostHtml(self.blogBase[listJsonName]["P" + number_str])
-            self.createPlistHtml()
-            self.createFeedXml()
-            print("====== create static html end ======")
-        else:
-            print("====== issue is closed ======")
-
     def createFileName(self, issue, useLabel=False):
         if useLabel == True:
             fileName = issue.labels[0].name
@@ -634,31 +622,7 @@ parser.add_argument("--issue_number", help="issue_number", default=0, required=F
 options = parser.parse_args()
 
 blog = GMEEK(options)
-
-if not os.path.exists("blogBase.json"):
-    print("blogBase is not exists, runAll")
-    blog.runAll()
-else:
-    if os.path.exists(blog.root_dir + "rss.xml"):
-        oldFeedFile = open(blog.root_dir + "rss.xml", "r", encoding="utf-8")
-        blog.oldFeedString = oldFeedFile.read()
-        oldFeedFile.close()
-    if options.issue_number == "0" or options.issue_number == "":
-        print("issue_number=='0', runAll")
-        blog.runAll()
-    else:
-        f = open("blogBase.json", "r")
-        print("blogBase is exists and issue_number!=0, runOne")
-        oldBlogBase = json.loads(f.read())
-        for key, value in oldBlogBase.items():
-            blog.blogBase[key] = value
-        f.close()
-        blog.blogBase["labelColorDict"] = blog.labelColorDict
-        blog.runOne(options.issue_number)
-
-listFile = open("blogBase.json", "w")
-listFile.write(json.dumps(blog.blogBase))
-listFile.close()
+blog.runAll()
 
 commentNumSum = 0
 wordCount = 0
