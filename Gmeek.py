@@ -629,7 +629,6 @@ class GMEEK:
 ######################################################################################
 parser = argparse.ArgumentParser()
 parser.add_argument("github_token", help="github_token")
-parser.add_argument("gitee_key", help="gitee_key")
 parser.add_argument("repo_name", help="repo_name")
 parser.add_argument("--issue_number", help="issue_number", default=0, required=False)
 options = parser.parse_args()
