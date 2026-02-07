@@ -23,7 +23,7 @@ i18n = {
     "home": "home",
     "comments": "comments",
     "run": "run ",
-    "days": " days",
+    "days": " day(s)",
     "Previous": "Previous",
     "Next": "Next",
 }
@@ -32,8 +32,8 @@ i18nCN = {
     "switchTheme": "切换主题",
     "home": "首页",
     "comments": "评论",
-    "run": "网站运行",
-    "days": "天",
+    "run": "网站运行 ",
+    "days": " 天",
     "Previous": "上一页",
     "Next": "下一页",
 }
