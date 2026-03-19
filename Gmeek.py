@@ -458,6 +458,44 @@ class GMEEK:
         print("====== create rss xml ======")
         feed.rss_file(self.root_dir + "rss.xml")
 
+    def createSiteMapXml(self):
+        baseUrl=self.blogBase["homeUrl"].rstrip("/")
+        nowDate=datetime.datetime.now(self.TZ).strftime("%Y-%m-%d")
+        seen=set()
+        entries=[]
+
+        def addUrl(path,lastmod):
+            fullUrl=baseUrl+"/"+path.lstrip("/")
+            if fullUrl not in seen:
+                seen.add(fullUrl)
+                entries.append((fullUrl,lastmod))
+
+        addUrl("index.html",nowDate)
+        addUrl("tag.html",nowDate)
+
+        postTotal=len(self.blogBase["postListJson"])
+        pageTotal=max(1,(postTotal+self.blogBase["onePageListNum"]-1)//self.blogBase["onePageListNum"])
+        for pageNum in range(2,pageTotal+1):
+            addUrl("page%d.html" % pageNum,nowDate)
+
+        for post in self.blogBase["singeListJson"].values():
+            postDate=datetime.datetime.fromtimestamp(post["createdAt"],tz=self.TZ).strftime("%Y-%m-%d")
+            addUrl(post["postUrl"],postDate)
+
+        for post in self.blogBase["postListJson"].values():
+            postDate=datetime.datetime.fromtimestamp(post["createdAt"],tz=self.TZ).strftime("%Y-%m-%d")
+            addUrl(post["postUrl"],postDate)
+
+        siteMapLine=['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+        for loc,lastmod in entries:
+            siteMapLine.append("<url><loc>%s</loc><lastmod>%s</lastmod></url>" % (html.escape(loc),lastmod))
+        siteMapLine.append("</urlset>")
+
+        print("====== create sitemap xml ======")
+        siteMapFile=open(self.root_dir+"sitemap.xml","w",encoding="utf-8")
+        siteMapFile.write("\n".join(siteMapLine))
+        siteMapFile.close()
+
     def addOnePostJson(self, issue):
         if len(issue.labels) >= 1:
             if issue.labels[0].name in self.blogBase["singlePage"]:
@@ -595,6 +633,7 @@ class GMEEK:
 
         self.createPlistHtml()
         self.createFeedXml()
+        self.createSiteMapXml()
         print("====== create static html end ======")
 
     def createFileName(self, issue, useLabel=False):
