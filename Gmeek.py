@@ -372,6 +372,52 @@ class GMEEK:
         )
         print("create tag.html")
 
+    def extractFirstImage(self, body):
+        """从文章正文提取第一张图片，返回 (url, mime_type) 或 (None, None)。"""
+        if not body:
+            return None, None
+
+        candidates = []
+        for match in re.finditer(
+            r"!\[(?:[^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)", body
+        ):
+            candidates.append((match.start(), match.group(1)))
+        for match in re.finditer(
+            r'<img[^>]+src=["\']([^"\']+)["\']', body, re.IGNORECASE
+        ):
+            candidates.append((match.start(), match.group(1)))
+
+        if not candidates:
+            return None, None
+
+        candidates.sort(key=lambda x: x[0])
+        url = candidates[0][1].strip()
+        if not url:
+            return None, None
+
+        if url.startswith("//"):
+            url = "https:" + url
+        elif url.startswith("/"):
+            url = self.blogBase["homeUrl"].rstrip("/") + url
+
+        path = urllib.parse.urlparse(url).path.lower()
+        mime_map = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".svg": "image/svg+xml",
+            ".bmp": "image/bmp",
+            ".ico": "image/x-icon",
+        }
+        mime = "image/jpeg"
+        for ext, mime_type in mime_map.items():
+            if path.endswith(ext):
+                mime = mime_type
+                break
+        return url, mime
+
     def createFeedXml(self):
         self.blogBase["postListJson"] = dict(
             sorted(
@@ -394,49 +440,33 @@ class GMEEK:
         feed.webMaster(self.blogBase["title"])
         feed.ttl("60")
 
-        for num in self.blogBase["singeListJson"]:
+        def addFeedItem(post):
             item = feed.add_item()
             item.guid(
-                self.blogBase["homeUrl"]
-                + "/"
-                + self.blogBase["singeListJson"][num]["postUrl"],
+                self.blogBase["homeUrl"] + "/" + post["postUrl"],
                 permalink=True,
             )
-            item.title(self.blogBase["singeListJson"][num]["postTitle"])
-            item.description(self.blogBase["singeListJson"][num]["description"])
-            item.link(
-                href=self.blogBase["homeUrl"]
-                + "/"
-                + self.blogBase["singeListJson"][num]["postUrl"]
-            )
+            item.title(post["postTitle"])
+            item.description(post["description"])
+            item.link(href=self.blogBase["homeUrl"] + "/" + post["postUrl"])
             item.pubDate(
                 time.strftime(
                     "%a, %d %b %Y %H:%M:%S +0000",
-                    time.gmtime(self.blogBase["singeListJson"][num]["createdAt"]),
+                    time.gmtime(post["createdAt"]),
                 )
             )
+            if post.get("coverImage"):
+                item.enclosure(
+                    url=post["coverImage"],
+                    length="0",
+                    type=post.get("coverImageType", "image/jpeg"),
+                )
+
+        for num in self.blogBase["singeListJson"]:
+            addFeedItem(self.blogBase["singeListJson"][num])
 
         for num in self.blogBase["postListJson"]:
-            item = feed.add_item()
-            item.guid(
-                self.blogBase["homeUrl"]
-                + "/"
-                + self.blogBase["postListJson"][num]["postUrl"],
-                permalink=True,
-            )
-            item.title(self.blogBase["postListJson"][num]["postTitle"])
-            item.description(self.blogBase["postListJson"][num]["description"])
-            item.link(
-                href=self.blogBase["homeUrl"]
-                + "/"
-                + self.blogBase["postListJson"][num]["postUrl"]
-            )
-            item.pubDate(
-                time.strftime(
-                    "%a, %d %b %Y %H:%M:%S +0000",
-                    time.gmtime(self.blogBase["postListJson"][num]["createdAt"]),
-                )
-            )
+            addFeedItem(self.blogBase["postListJson"][num])
 
         if self.oldFeedString != "":
             feed.rss_file(self.root_dir + "new.xml")
@@ -531,6 +561,8 @@ class GMEEK:
             if issue.body == None:
                 self.blogBase[listJsonName][postNum]["description"] = ""
                 self.blogBase[listJsonName][postNum]["wordCount"] = 0
+                self.blogBase[listJsonName][postNum]["coverImage"] = ""
+                self.blogBase[listJsonName][postNum]["coverImageType"] = ""
             else:
                 self.blogBase[listJsonName][postNum]["wordCount"] = len(issue.body)
                 if self.blogBase["rssSplit"] == "sentence":
@@ -543,6 +575,9 @@ class GMEEK:
                 self.blogBase[listJsonName][postNum]["description"] = (
                     issue.body.split(period)[0].replace('"', "'") + period
                 )
+                coverUrl, coverType = self.extractFirstImage(issue.body)
+                self.blogBase[listJsonName][postNum]["coverImage"] = coverUrl or ""
+                self.blogBase[listJsonName][postNum]["coverImageType"] = coverType or ""
 
             self.blogBase[listJsonName][postNum]["top"] = 0
             for event in issue.get_events():
